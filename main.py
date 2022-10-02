@@ -7,11 +7,11 @@ import argparse
 
 def parse_args():
     parser = argparse.ArgumentParser('Point Cloud Visualizer')
+    parser.add_argument('--path', type=str, help='the input file path', default='plane.ply')
     parser.add_argument('--render', help='using mitsuba3 create beautiful image', action='store_true')
     parser.add_argument('--tool', help='using real time point cloud visualization tools', action='store_true')
     parser.add_argument('--knn', help='using knn',  action='store_true')
     parser.add_argument('--white', help='white color',  action='store_true')
-    parser.add_argument('--path', type=str, help='the input file path', default='plane.ply')
     parser.add_argument('--num', type=int, help='downsample point num', default=1024)
     parser.add_argument('--center_num', type=int, help='knn center num', default=12)
     parser.add_argument('--workdir', type=str, help='workdir', default='workdir')
