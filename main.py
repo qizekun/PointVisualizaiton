@@ -12,11 +12,12 @@ def parse_args():
     parser.add_argument('--tool', help='using real time point cloud visualization tools', action='store_true')
     parser.add_argument('--knn', help='using knn',  action='store_true')
     parser.add_argument('--white', help='white color',  action='store_true')
+    parser.add_argument('--RGB', nargs='+', help='RGB color', default=[])
     parser.add_argument('--num', type=int, help='downsample point num', default=1024)
     parser.add_argument('--center_num', type=int, help='knn center num', default=16)
     parser.add_argument('--workdir', type=str, help='workdir', default='workdir')
     parser.add_argument('--output', type=str, help='output file name', default='result.jpg')
-    parser.add_argument('--resolution', type=list, help='output file resolution', default=[1920, 1080])
+    parser.add_argument('--resolution', nargs='+', help='output file resolution', default=[1920, 1080])
     parser.add_argument('--radius', type=float, help='radius', default=0.025)
     parser.add_argument('--contrast', type=float, help='radius', default=0.0004)
 

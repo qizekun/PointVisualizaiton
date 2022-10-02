@@ -33,6 +33,8 @@ def colormap(x, y, z, config, knn_center=[]):
 
     if config.white:
         return [0.6, 0.6, 0.6]
+    elif config.RGB != []:
+        return [int(i) / 255 for i in config.RGB]
 
     vec = np.array([x, y, z])
     if knn_center != []:
@@ -63,19 +65,13 @@ def standardize_bbox(pcl, points_per_object):
 def fps(points, k):
     sample_points = np.zeros((k, 3))
     
-    # 用离重心最远的初始化
     barycenter = np.sum(points, axis=0)/points.shape[0]
     print(barycenter)
     distance = np.full((points.shape[0]), np.nan)
     point = barycenter
     
-    # # 随机初始化
-    # point = points[0]
-    # points = points[:-1,:]
-    # sample_points[0,:] = point
-    # distance = np.sum((points - point)**2, axis=1)
     for i in range(k):
-        distance = np.minimum(distance, np.sum((points - point)**2, axis=1)) # 前缀思想更新最小值
+        distance = np.minimum(distance, np.sum((points - point)**2, axis=1))
         index = np.argmax(distance)
         point = points[index]
         sample_points[i,:] = point
@@ -87,6 +83,11 @@ def fps(points, k):
 
 
 def get_xml(resolution=[1920, 1080], radius=0.025):
+    width, height = int(resolution[0]), int(resolution[1])
+    if width / height > 4 / 3:
+        position = "3,3,3"
+    else:
+        position = "2,2,2"
     xml_head = \
     f"""
     <scene version="0.6.0">
@@ -97,15 +98,15 @@ def get_xml(resolution=[1920, 1080], radius=0.025):
             <float name="farClip" value="100"/>
             <float name="nearClip" value="0.1"/>
             <transform name="toWorld">
-                <lookat origin="3,3,3" target="0,0,0" up="0,0,1"/>
+                <lookat origin="{position}" target="0,0,0" up="0,0,1"/>
             </transform>
             <float name="fov" value="25"/>
             <sampler type="independent">
                 <integer name="sampleCount" value="256"/>
             </sampler>
             <film type="hdrfilm">
-                <integer name="width" value="{resolution[0]}"/>
-                <integer name="height" value="{resolution[1]}"/>
+                <integer name="width" value="{width}"/>
+                <integer name="height" value="{height}"/>
                 <rfilter type="gaussian"/>
             </film>
         </sensor>
@@ -120,24 +121,24 @@ def get_xml(resolution=[1920, 1080], radius=0.025):
     """
 
     xml_ball_segment = \
-    f"""
+    """
         <shape type="sphere">
-            <float name="radius" value="{radius}"/>
+            <float name="radius" value="%s"/>
             <transform name="toWorld">
-                <translate x="{"{}"}" y="{"{}"}" z="{"{}"}"/>
+                <translate x="{}" y="{}" z="{}"/>
             </transform>
             <bsdf type="diffuse">
-                <rgb name="reflectance" value="{"{}"},{"{}"},{"{}"}"/>
+                <rgb name="reflectance" value="{},{},{}"/>
             </bsdf>
         </shape>
-    """
+    """%radius
 
     xml_tail = \
     """
         <shape type="rectangle">
             <ref name="bsdf" id="surfaceMaterial"/>
             <transform name="toWorld">
-                <scale x="10" y="10" z="1"/>
+                <scale x="10" y="10" z="2"/>
                 <translate x="0" y="0" z="-0.5"/>
             </transform>
         </shape>

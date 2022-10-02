@@ -36,5 +36,6 @@ python main.py --path <file path> --tool
 
 Many thanks to following codes that help us a lot in building this codebase:
 
+* [PointFlowRenderer](https://github.com/zekunhao1995/PointFlowRenderer)
 * [Mitsuba2PointCloudRenderer](https://github.com/tolgabirdal/Mitsuba2PointCloudRenderer) 
 * [PointSetGeneration](https://github.com/fanhqme/PointSetGeneration)
