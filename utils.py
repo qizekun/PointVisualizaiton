@@ -29,9 +29,9 @@ def load(path, Separator=';'):
         raise FileNotFoundError
     return pcl
 
-def colormap(x, y, z, knn_center=[], white=False):
+def colormap(x, y, z, config, knn_center=[]):
 
-    if white:
+    if config.white:
         return [0.6, 0.6, 0.6]
 
     vec = np.array([x, y, z])
@@ -40,7 +40,7 @@ def colormap(x, y, z, knn_center=[], white=False):
         index = np.argmin(temp)
         vec = knn_center[index]
 
-    vec = np.clip(vec, 0.0008, 1.0)
+    vec = np.clip(vec, config.contrast, 1.0)
     norm = np.sqrt(np.sum(vec ** 2))
     vec /= norm
 
