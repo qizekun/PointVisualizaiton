@@ -2,7 +2,7 @@ import numpy as np
 from plyfile import PlyData
 
 
-def load(path, Separator=';'):
+def load(path, separator=','):
     extension = path.split('.')[-1]
     if extension == 'npy':
         pcl = np.load(path, allow_pickle=True)
@@ -19,7 +19,7 @@ def load(path, Separator=';'):
         line = f.readline() 
         data = []
         while line:
-            x,y,z = line.split(Separator)
+            x,y,z = line.split(separator)[:3]
             data.append([float(x), float(y), float(z)])
             line = f.readline()
         f.close() 
