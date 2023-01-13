@@ -5,6 +5,8 @@ from utils import load, standardize_bbox, colormap, get_xml, fps
 import simple3d
 import argparse
 import numpy as np
+import torch
+import cv2
 
 
 def parse_args():
@@ -14,7 +16,8 @@ def parse_args():
     parser.add_argument('--tool', help='using real time point cloud visualization tools', action='store_true')
     parser.add_argument('--knn', help='using knn',  action='store_true')
     parser.add_argument('--part', help='part visualization',  action='store_true')
-    parser.add_argument('--white', help='white color',  action='store_true')
+    parser.add_argument('--white', help='white color', action='store_true')
+    parser.add_argument('--value_path', help='point value', default='')
     parser.add_argument('--RGB', nargs='+', help='RGB color', default=[])
     parser.add_argument('--num', type=int, help='downsample point num', default=1024)
     parser.add_argument('--center_num', type=int, help='knn center num', default=16)
@@ -44,9 +47,23 @@ def render(config, pcl):
 
     xml_head, xml_ball_segment, xml_tail = get_xml(config.resolution, config.radius)
     xml_segments = [xml_head]
-    for i in range(pcl.shape[0]):
-        color = colormap(pcl[i, 0] + 0.5, pcl[i, 1] + 0.5, pcl[i, 2] + 0.5 - 0.0125, config, knn_center)
-        xml_segments.append(xml_ball_segment.format(pcl[i, 0], pcl[i, 1], pcl[i, 2], *color))
+
+    # if rander the point with self colormap
+    if config.value_path != "":
+        vec = load(path=config.value_path)#[0]
+        vec = 255 - 255 * (vec - np.min(vec))/(np.max(vec) - np.min(vec))
+        L = len(vec)
+        vec = vec.reshape(1, L).astype(np.uint8)
+        vec = cv2.applyColorMap(vec, cv2.COLORMAP_JET)
+        vec = vec.reshape(L, 3) / 255
+        for i in range(pcl.shape[0]):
+            color = 0.5 * vec[i] + 0.5 * 0.5
+            xml_segments.append(xml_ball_segment.format(pcl[i, 0], pcl[i, 1], pcl[i, 2], *color))
+    # rander the point with position colormap
+    else:
+        for i in range(pcl.shape[0]):
+            color = colormap(pcl[i, 0] + 0.5, pcl[i, 1] + 0.5, pcl[i, 2] + 0.5 - 0.0125, config, knn_center)
+            xml_segments.append(xml_ball_segment.format(pcl[i, 0], pcl[i, 1], pcl[i, 2], *color))
     
     xml_segments.append(xml_tail)
     xml_content = str.join('', xml_segments)
@@ -129,7 +146,7 @@ def main():
     pcl = load(config.path, config.separator)
     if config.part:
         config.num = min(pcl.shape[0], config.num * 4)
-    pcl = standardize_bbox(pcl, config.num)
+    pcl = standardize_bbox(pcl, config.num, config)
 
     if config.part:
         render_part(config, pcl)

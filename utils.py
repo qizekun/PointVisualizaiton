@@ -24,6 +24,10 @@ def load(path, separator=','):
             line = f.readline()
         f.close() 
         pcl = np.array(data)
+    elif extension == 'pth':
+        import torch
+        pcl = torch.load(path, map_location='cpu')
+        pcl = pcl.detach().numpy()
     else:
         print('unsupported file format.')
         raise FileNotFoundError
@@ -49,10 +53,11 @@ def colormap(x, y, z, config, knn_center=[]):
     return [vec[0], vec[1], vec[2]]
 
 
-def standardize_bbox(pcl, points_per_object):
-    pt_indices = np.random.choice(pcl.shape[0], points_per_object, replace=False)
-    np.random.shuffle(pt_indices)
-    pcl = pcl[pt_indices]  # n by 3
+def standardize_bbox(pcl, points_per_object, config):
+    if config.value_path == "":
+        pt_indices = np.random.choice(pcl.shape[0], points_per_object, replace=False)
+        np.random.shuffle(pt_indices)
+        pcl = pcl[pt_indices]  # n by 3
     mins = np.amin(pcl, axis=0)
     maxs = np.amax(pcl, axis=0)
     center = (mins + maxs) / 2.
