@@ -8,10 +8,9 @@ A point cloud visualization repo
 
 ## Dependencies
 
+python >= 3.7
 ```bash
-pip install mitsuba3
-pip install plyfile
-pip install numpy
+pip install -r requirements.txt
 ```
 
 ## Usage
@@ -21,10 +20,16 @@ pip install numpy
 python main.py --path <file path> --render
 
 # Render a single file to knn cluster colorful image
-python main.py --path <file path> --render -knn
+python main.py --path <file path> --render --knn
 
 # Render a single file to white image
-python main.py --path <file path> --render -white
+python main.py --path <file path> --render --white
+
+# Render a single file to split part
+python main.py --path <file path> --part
+
+# Render a single file with rotation 90 degree in y axis
+python main.py --path <file path> --render --rot 0 90 0
 
 # view real time point cloud
 python main.py --path <file path> --tool

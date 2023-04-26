@@ -47,15 +47,10 @@ def load_self_colormap(value_path):
 
 
 def generate_pos_colormap(x, y, z, config, knn_center=[]):
-    if config.white:
-        return [0.6, 0.6, 0.6]
-    elif config.RGB != []:
-        return [int(i) / 255 for i in config.RGB]
-
     vec = np.array([x, y, z])
     if knn_center != []:
-        temp = abs(knn_center[:, 0] - x) + abs(knn_center[:, 1] - y) + abs(knn_center[:, 2] - z)
-        index = np.argmin(temp)
+        dis = np.linalg.norm(knn_center - vec, axis=1)
+        index = np.argmin(dis)
         vec = knn_center[index]
 
     vec = np.clip(vec, config.contrast, 1.0)
@@ -102,6 +97,20 @@ def fps(data, k):
         points = points[mask]
         distance = distance[mask]
     return sample_data
+
+
+def rotation(rotation_angle):
+    x, y, z = rotation_angle
+    x, y, z = int(x), int(y), int(z)
+    print(f'rotation angle: {x}, {y}, {z}')
+    x_rad, y_rad, z_rad = np.radians(x), np.radians(y), np.radians(z)
+
+    rot_x = np.array([[1, 0, 0], [0, np.cos(x_rad), -np.sin(x_rad)], [0, np.sin(x_rad), np.cos(x_rad)]])
+    rot_y = np.array([[np.cos(y_rad), 0, np.sin(y_rad)], [0, 1, 0], [-np.sin(y_rad), 0, np.cos(y_rad)]])
+    rot_z = np.array([[np.cos(z_rad), -np.sin(z_rad), 0], [np.sin(z_rad), np.cos(z_rad), 0], [0, 0, 1]])
+
+    rot_matrix = np.dot(np.dot(rot_z, rot_y), rot_x)
+    return rot_matrix
 
 
 def get_xml(resolution=[1920, 1080], radius=0.025):

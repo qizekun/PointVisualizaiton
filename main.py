@@ -1,6 +1,6 @@
 import argparse
 import numpy as np
-from utils import load, standardize_bbox, fps, load_self_colormap
+from utils import load, standardize_bbox, load_self_colormap, rotation
 from render import render, render_part, real_time_tool
 
 
@@ -14,11 +14,12 @@ def parse_args():
     parser.add_argument('--white', help='white color', action='store_true')
     parser.add_argument('--value_path', help='point heat map value', default='')
     parser.add_argument('--RGB', nargs='+', help='RGB color', default=[])
+    parser.add_argument('--rot', nargs='+', help='rotation angle from x,y,z', default=[])
     parser.add_argument('--num', type=int, help='downsample point num', default=np.inf)
-    parser.add_argument('--center_num', type=int, help='knn center num', default=16)
+    parser.add_argument('--center_num', type=int, help='knn center num', default=24)
     parser.add_argument('--workdir', type=str, help='workdir', default='workdir')
     parser.add_argument('--output', type=str, help='output file name', default='result.jpg')
-    parser.add_argument('--resolution', nargs='+', help='output file resolution', default=[800, 800])
+    parser.add_argument('--res', nargs='+', help='output file resolution', default=[800, 800])
     parser.add_argument('--radius', type=float, help='radius', default=0.025)
     parser.add_argument('--contrast', type=float, help='contrast', default=0.0004)
     parser.add_argument('--separator', type=str, help='text separator', default=",")
@@ -37,10 +38,14 @@ def main():
     pcl = load(config.path, config.separator)
     print(f'point cloud shape: {pcl.shape}')
 
+    if config.rot != []:
+        rot_matrix = rotation(config.rot)
+        pcl[:, :3] = np.matmul(pcl[:, :3], rot_matrix)
+
     # if rander the point with self colormap
     if config.value_path != "":
         color = load_self_colormap(config.value_path)
-        pcl = np.concatenate((pcl, color), axis=1)  # add color to point cloud
+        pcl = np.concatenate((pcl, color), axis=1)
 
     if config.num < pcl.shape[0]:
         print(f'downsample to {config.num} points')

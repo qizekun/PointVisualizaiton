@@ -1,0 +1,6 @@
+mitsuba
+argparse
+numpy
+opencv-python
+plyfile
+torch
