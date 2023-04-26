@@ -1,3 +1,4 @@
+import cv2
 import numpy as np
 from plyfile import PlyData
 
@@ -15,14 +16,14 @@ def load(path, separator=','):
         (x, y, z) = (vertex[t] for t in ('x', 'y', 'z'))
         pcl = np.column_stack((x, y, z))
     elif extension == 'txt':
-        f = open(path,'r') 
-        line = f.readline() 
+        f = open(path, 'r')
+        line = f.readline()
         data = []
         while line:
-            x,y,z = line.split(separator)[:3]
+            x, y, z = line.split(separator)[:3]
             data.append([float(x), float(y), float(z)])
             line = f.readline()
-        f.close() 
+        f.close()
         pcl = np.array(data)
     elif extension == 'pth':
         import torch
@@ -33,8 +34,19 @@ def load(path, separator=','):
         raise FileNotFoundError
     return pcl
 
-def colormap(x, y, z, config, knn_center=[]):
 
+def load_self_colormap(value_path):
+    vec = load(path=value_path)  # load the value of each point, and the shape is (N)
+    vec = np.power(vec, 2)  # You can adjust the Level Curve with gamma transformation
+    vec = 255 - 255 * (vec - np.min(vec)) / (np.max(vec) - np.min(vec))  # normalize to [0, 255]
+    vec = vec.reshape(1, -1).astype(np.uint8)
+    vec = cv2.applyColorMap(vec, cv2.COLORMAP_JET)  # apply colormap
+    color = vec.reshape(-1, 3) / 255  # normalize to [0, 1]
+    color = 0.5 * color + 0.5 * 0.5
+    return color
+
+
+def generate_pos_colormap(x, y, z, config, knn_center=[]):
     if config.white:
         return [0.6, 0.6, 0.6]
     elif config.RGB != []:
@@ -53,38 +65,43 @@ def colormap(x, y, z, config, knn_center=[]):
     return [vec[0], vec[1], vec[2]]
 
 
-def standardize_bbox(pcl, points_per_object, config):
-    if config.value_path == "":
-        pt_indices = np.random.choice(pcl.shape[0], points_per_object, replace=False)
-        np.random.shuffle(pt_indices)
-        pcl = pcl[pt_indices]  # n by 3
+def standardize_bbox(data):
+    pcl = data[:, :3]
     mins = np.amin(pcl, axis=0)
     maxs = np.amax(pcl, axis=0)
     center = (mins + maxs) / 2.
     scale = np.amax(maxs - mins)
-    print("Center: {}, Scale: {}".format(center, scale))
     result = ((pcl - center) / scale).astype(np.float32)  # [-0.5, 0.5]
+    print("Center: {}, Scale: {}".format(center, scale))
+    
+    if data.shape[1] == 6:
+        color = data[:, 3:]
+        color[color < 0] = 0
+        color[color > 1] = 1
+        result = np.concatenate((result, color), axis=1)
+        
     return result
 
 
-def fps(points, k):
-    sample_points = np.zeros((k, 3))
-    
-    barycenter = np.sum(points, axis=0)/points.shape[0]
-    print(barycenter)
+def fps(data, k):
+    N, C = data.shape
+    sample_data = np.zeros((k, C))
+    points = data[:, :3]
+    color = data[:, 3:]
+    barycenter = np.sum(points, axis=0) / points.shape[0]
     distance = np.full((points.shape[0]), np.nan)
     point = barycenter
-    
+
     for i in range(k):
-        distance = np.minimum(distance, np.sum((points - point)**2, axis=1))
+        distance = np.minimum(distance, np.sum((points - point) ** 2, axis=1))
         index = np.argmax(distance)
         point = points[index]
-        sample_points[i,:] = point
+        sample_data[i] = np.concatenate((point, color[index]), axis=0)
         mask = np.ones((points.shape[0]), dtype=bool)
         mask[index] = False
         points = points[mask]
         distance = distance[mask]
-    return sample_points
+    return sample_data
 
 
 def get_xml(resolution=[1920, 1080], radius=0.025):
@@ -94,7 +111,7 @@ def get_xml(resolution=[1920, 1080], radius=0.025):
     else:
         position = "2,2,2"
     xml_head = \
-    f"""
+        f"""
     <scene version="0.6.0">
         <integrator type="path">
             <integer name="maxDepth" value="-1"/>
@@ -126,7 +143,7 @@ def get_xml(resolution=[1920, 1080], radius=0.025):
     """
 
     xml_ball_segment = \
-    """
+        """
         <shape type="sphere">
             <float name="radius" value="%s"/>
             <transform name="toWorld">
@@ -136,10 +153,10 @@ def get_xml(resolution=[1920, 1080], radius=0.025):
                 <rgb name="reflectance" value="{},{},{}"/>
             </bsdf>
         </shape>
-    """%radius
+    """ % radius
 
     xml_tail = \
-    """
+        """
         <shape type="rectangle">
             <ref name="bsdf" id="surfaceMaterial"/>
             <transform name="toWorld">
