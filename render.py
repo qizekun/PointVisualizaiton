@@ -22,22 +22,19 @@ def render(config, data):
     xml_head, xml_ball_segment, xml_tail = get_xml(config.res, config.radius)
     xml_segments = [xml_head]
 
-    if data.shape[1] == 6:
-        for i in range(pcl.shape[0]):
+    with_color = True if data.shape[1] == 6 else False
+    for i in range(pcl.shape[0]):
+        if config.white:
+            color = [0.6, 0.6, 0.6]
+        elif config.RGB != []:
+            color = [int(i) / 255 for i in config.RGB]
+        elif with_color:
             color = [data[i, 3], data[i, 4], data[i, 5]]
-            xml_segments.append(xml_ball_segment.format(pcl[i, 0], pcl[i, 1], pcl[i, 2], *color))
-
-    else:
-        for i in range(pcl.shape[0]):
-            if config.white:
-                color = [0.6, 0.6, 0.6]
-            elif config.RGB != []:
-                color = [int(i) / 255 for i in config.RGB]
-            else:
-                # rander the point with position generate_pos_colormap
-                color = generate_pos_colormap(pcl[i, 0] + 0.5, pcl[i, 1] + 0.5, pcl[i, 2] + 0.5 - 0.0125,
-                                              config, knn_center)
-            xml_segments.append(xml_ball_segment.format(pcl[i, 0], pcl[i, 1], pcl[i, 2], *color))
+        else:
+            # rander the point with position generate_pos_colormap
+            color = generate_pos_colormap(pcl[i, 0] + 0.5, pcl[i, 1] + 0.5, pcl[i, 2] + 0.5 - 0.0125,
+                                            config, knn_center)
+        xml_segments.append(xml_ball_segment.format(pcl[i, 0], pcl[i, 1], pcl[i, 2], *color))
 
     xml_segments.append(xml_tail)
     xml_content = str.join('', xml_segments)
@@ -53,7 +50,7 @@ def render(config, data):
     image = mi.render(scene, spp=256)
     mi.util.write_bitmap(config.output, image)
     # To prevent errors in the output image, we delay some seconds
-    time.sleep(config.res[0] / 1000)
+    time.sleep(int(config.res[0]) / 1000)
     os.remove(xmlFile)
 
 
@@ -104,7 +101,7 @@ def render_part(config, pcl):
         output_file = config.output.split('.')[0] + f'_{str(i)}.' + config.output.split('.')[1]
         mi.util.write_bitmap(output_file, image)
         # To prevent errors in the output image, we delay some seconds
-        time.sleep(config.res[0] / 1000)
+        time.sleep(int(config.res[0]) / 1000)
         os.remove(xmlFile)
 
 
