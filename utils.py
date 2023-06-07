@@ -32,6 +32,13 @@ def load(path, separator=','):
     else:
         print('unsupported file format.')
         raise FileNotFoundError
+
+    print(f'point cloud shape: {pcl.shape}')
+    assert pcl.shape[-1] == 3 or pcl.shape[-1] == 6
+
+    if len(pcl.shape) == 3:
+        pcl = pcl[0]
+        print("the dimension is 3, we select the first element in the batch.")
     return pcl
 
 
@@ -113,12 +120,12 @@ def rotation(rotation_angle):
     return rot_matrix
 
 
-def get_xml(resolution=[1920, 1080], radius=0.025):
+def get_xml(resolution=[1920, 1080], radius=0.025, object_type="point"):
     width, height = int(resolution[0]), int(resolution[1])
     if width / height > 4 / 3:
         position = "3,3,3"
     else:
-        position = "2,2,2"
+        position = "2.5,2,2"
     xml_head = \
         f"""
     <scene version="0.6.0">
@@ -163,6 +170,19 @@ def get_xml(resolution=[1920, 1080], radius=0.025):
             </bsdf>
         </shape>
     """ % radius
+    
+    xml_cube_segment = \
+        """
+        <shape type="cube">
+        <transform name="toWorld">
+            <scale x="%s" y="%s" z="%s" />
+            <translate x="{}" y="{}" z="{}"/>
+        </transform>
+        <bsdf type="diffuse">
+            <rgb name="reflectance" value="{},{},{}"/>
+        </bsdf>
+    </shape>
+    """ % (radius, radius, radius)
 
     xml_tail = \
         """
@@ -185,4 +205,7 @@ def get_xml(resolution=[1920, 1080], radius=0.025):
         </shape>
     </scene>
     """
-    return xml_head, xml_ball_segment, xml_tail
+
+    assert object_type == "point" or object_type == "voxel"
+    xml_object_segment = xml_ball_segment if object_type == "point" else xml_cube_segment
+    return xml_head, xml_object_segment, xml_tail

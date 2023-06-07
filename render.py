@@ -19,7 +19,7 @@ def render(config, data):
     else:
         knn_center = []
 
-    xml_head, xml_ball_segment, xml_tail = get_xml(config.res, config.radius)
+    xml_head, xml_object_segment, xml_tail = get_xml(config.res, config.radius, config.type)
     xml_segments = [xml_head]
 
     with_color = True if data.shape[1] == 6 else False
@@ -34,7 +34,7 @@ def render(config, data):
             # rander the point with position generate_pos_colormap
             color = generate_pos_colormap(pcl[i, 0] + 0.5, pcl[i, 1] + 0.5, pcl[i, 2] + 0.5 - 0.0125,
                                             config, knn_center)
-        xml_segments.append(xml_ball_segment.format(pcl[i, 0], pcl[i, 1], pcl[i, 2], *color))
+        xml_segments.append(xml_object_segment.format(pcl[i, 0], pcl[i, 1], pcl[i, 2], *color))
 
     xml_segments.append(xml_tail)
     xml_content = str.join('', xml_segments)
@@ -77,13 +77,13 @@ def render_part(config, pcl):
 
     for i in range(config.center_num):
         knn_patch = np.array(pcl_list[i])
-        xml_head, xml_ball_segment, xml_tail = get_xml(config.res, config.radius)
+        xml_head, xml_object_segment, xml_tail = get_xml(config.res, config.radius, config.type)
         xml_segments = [xml_head]
 
         knn_patch = standardize_bbox(knn_patch)
         for j in range(len(knn_patch)):
             color = generate_pos_colormap(knn_patch[j, 0] + 0.5, knn_patch[j, 1] + 0.5, knn_patch[j, 2] + 0.5 - 0.0125, config, [])
-            xml_segments.append(xml_ball_segment.format(knn_patch[j, 0], knn_patch[j, 1], knn_patch[j, 2], *color))
+            xml_segments.append(xml_object_segment.format(knn_patch[j, 0], knn_patch[j, 1], knn_patch[j, 2], *color))
 
         xml_segments.append(xml_tail)
         xml_content = str.join('', xml_segments)
