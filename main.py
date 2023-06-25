@@ -24,6 +24,7 @@ def parse_args():
     parser.add_argument('--contrast', type=float, help='contrast', default=0.0004)
     parser.add_argument('--separator', type=str, help='text separator', default=",")
     parser.add_argument('--type', type=str, help='render type, include point and voxel', default="point")
+    parser.add_argument('--mask', help='mask the point cloud', action='store_true')
 
     args = parser.parse_args()
     return args

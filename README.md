@@ -69,6 +69,8 @@ If the size is B × N × 3, the first element in the batch will be selected.
 
 `--RGB`: Render object with specific RGB value. Note that RGB render will ignore the origin color infomation (if have).
 
+`--mask`: Render masked point cloud.
+
 ## Source
 
 Many thanks to following codes that help us a lot in building this codebase:

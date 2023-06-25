@@ -18,12 +18,24 @@ def render(config, data):
         knn_center[:, 2] -= 0.0125
     else:
         knn_center = []
+    
+    if config.mask:
+        mask_center = fps(pcl, 128)
+        mask_center = mask_center[:64]
 
     xml_head, xml_object_segment, xml_tail = get_xml(config.res, config.radius, config.type)
     xml_segments = [xml_head]
 
     with_color = True if data.shape[1] == 6 else False
     for i in range(pcl.shape[0]):
+        if config.mask:
+            mask = False
+            for j in range(len(mask_center)):
+                if distance(pcl[i], mask_center[j]) < 0.05:
+                    mask = True
+                    break
+            if mask:
+                continue
         if config.white:
             color = [0.6, 0.6, 0.6]
         elif config.RGB != []:
@@ -103,6 +115,10 @@ def render_part(config, pcl):
         # To prevent errors in the output image, we delay some seconds
         time.sleep(int(config.res[0]) / 1000)
         os.remove(xmlFile)
+
+
+def distance(p1, p2):
+    return np.sqrt(np.sum(np.square(p1 - p2)))
 
 
 def real_time_tool(config, pcl):
