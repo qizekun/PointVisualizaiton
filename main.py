@@ -25,6 +25,9 @@ def parse_args():
     parser.add_argument('--separator', type=str, help='text separator', default=",")
     parser.add_argument('--type', type=str, help='render type, include point and voxel', default="point")
     parser.add_argument('--mask', help='mask the point cloud', action='store_true')
+    parser.add_argument('--view', nargs='+', help='the x,y,z position of camera view point', default=[3, 3, 3])
+    parser.add_argument('--translate', nargs='+', help='the x,y,z position of object translate', default=[0, 0, 0])
+    parser.add_argument('--scale', nargs='+', help='the x,y,z scale of object', default=[1, 1, 1])
 
     args = parser.parse_args()
     return args

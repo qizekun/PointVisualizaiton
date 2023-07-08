@@ -23,8 +23,11 @@ def render(config, data):
         mask_center = fps(pcl, 128)
         mask_center = mask_center[:64]
 
-    xml_head, xml_object_segment, xml_tail = get_xml(config.res, config.radius, config.type)
+    xml_head, xml_object_segment, xml_tail = get_xml(config.res, config.view, config.radius, config.type)
     xml_segments = [xml_head]
+
+    x, y, z = float(config.translate[0]), float(config.translate[1]), float(config.translate[2])
+    scale_x, scale_y, scale_z = float(config.scale[0]), float(config.scale[1]), float(config.scale[2])
 
     with_color = True if data.shape[1] == 6 else False
     for i in range(pcl.shape[0]):
@@ -46,7 +49,8 @@ def render(config, data):
             # rander the point with position generate_pos_colormap
             color = generate_pos_colormap(pcl[i, 0] + 0.5, pcl[i, 1] + 0.5, pcl[i, 2] + 0.5 - 0.0125,
                                             config, knn_center)
-        xml_segments.append(xml_object_segment.format(pcl[i, 0], pcl[i, 1], pcl[i, 2], *color))
+        xml_segments.append(xml_object_segment.format(
+            (pcl[i, 0] + x) * scale_x, (pcl[i, 1] + y) * scale_y, (pcl[i, 2] + z) * scale_z, *color))
 
     xml_segments.append(xml_tail)
     xml_content = str.join('', xml_segments)
@@ -89,7 +93,7 @@ def render_part(config, pcl):
 
     for i in range(config.center_num):
         knn_patch = np.array(pcl_list[i])
-        xml_head, xml_object_segment, xml_tail = get_xml(config.res, config.radius, config.type)
+        xml_head, xml_object_segment, xml_tail = get_xml(config.res, config.view, config.radius, config.type)
         xml_segments = [xml_head]
 
         knn_patch = standardize_bbox(knn_patch)

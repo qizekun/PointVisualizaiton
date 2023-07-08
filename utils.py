@@ -120,12 +120,10 @@ def rotation(rotation_angle):
     return rot_matrix
 
 
-def get_xml(resolution=[1920, 1080], radius=0.025, object_type="point"):
+def get_xml(resolution=[1920, 1080], view=[3, 3, 3], radius=0.025, object_type="point"):
     width, height = int(resolution[0]), int(resolution[1])
-    if width / height > 4 / 3:
-        position = "3,3,3"
-    else:
-        position = "2.5,2,2"
+    x, y, z = float(view[0]), float(view[1]), float(view[2])
+    position = f"{x}, {y}, {z}"
     xml_head = \
         f"""
     <scene version="0.6.0">
@@ -189,7 +187,7 @@ def get_xml(resolution=[1920, 1080], radius=0.025, object_type="point"):
         <shape type="rectangle">
             <ref name="bsdf" id="surfaceMaterial"/>
             <transform name="toWorld">
-                <scale x="10" y="10" z="2"/>
+                <scale x="100" y="100" z="2"/>
                 <translate x="0" y="0" z="-0.5"/>
             </transform>
         </shape>
