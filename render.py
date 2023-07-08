@@ -3,54 +3,27 @@ import time
 import numpy as np
 import mitsuba as mi
 import simple3d
-from utils import standardize_bbox, generate_pos_colormap, get_xml, fps
+from utils import standardize_bbox, generate_pos_colormap, get_xml, fps, mask_point
 
 
-def render(config, data):
+def render(config, pcl):
     file_name = config.path.split('.')[0]
-    pcl = data[:, [2, 0, 1]]
-    pcl[:, 0] *= 1
-    pcl[:, 2] += 0.0125
+    pcl[:, 2] *= -1
+    pcl[:, 1] -= min(pcl[:, 1]) + 0.25
 
-    if config.knn:
-        knn_center = fps(pcl, config.center_num)
-        knn_center += 0.5
-        knn_center[:, 2] -= 0.0125
-    else:
-        knn_center = []
-    
     if config.mask:
-        mask_center = fps(pcl, 128)
-        mask_center = mask_center[:64]
+        pcl = mask_point(pcl)
 
     xml_head, xml_object_segment, xml_tail = get_xml(config.res, config.view, config.radius, config.type)
     xml_segments = [xml_head]
 
-    x, y, z = float(config.translate[0]), float(config.translate[1]), float(config.translate[2])
-    scale_x, scale_y, scale_z = float(config.scale[0]), float(config.scale[1]), float(config.scale[2])
+    translate = list(map(float, config.translate))
+    scale = list(map(float, config.scale))
 
-    with_color = True if data.shape[1] == 6 else False
     for i in range(pcl.shape[0]):
-        if config.mask:
-            mask = False
-            for j in range(len(mask_center)):
-                if distance(pcl[i], mask_center[j]) < 0.05:
-                    mask = True
-                    break
-            if mask:
-                continue
-        if config.white:
-            color = [0.6, 0.6, 0.6]
-        elif config.RGB != []:
-            color = [int(i) / 255 for i in config.RGB]
-        elif with_color:
-            color = [data[i, 3], data[i, 4], data[i, 5]]
-        else:
-            # rander the point with position generate_pos_colormap
-            color = generate_pos_colormap(pcl[i, 0] + 0.5, pcl[i, 1] + 0.5, pcl[i, 2] + 0.5 - 0.0125,
-                                            config, knn_center)
-        xml_segments.append(xml_object_segment.format(
-            (pcl[i, 0] + x) * scale_x, (pcl[i, 1] + y) * scale_y, (pcl[i, 2] + z) * scale_z, *color))
+        y, z, x = pcl[i, :3] * scale + translate
+        color = pcl[i, 3:]
+        xml_segments.append(xml_object_segment.format(x, y, z, *color))
 
     xml_segments.append(xml_tail)
     xml_content = str.join('', xml_segments)
@@ -98,7 +71,7 @@ def render_part(config, pcl):
 
         knn_patch = standardize_bbox(knn_patch)
         for j in range(len(knn_patch)):
-            color = generate_pos_colormap(knn_patch[j, 0] + 0.5, knn_patch[j, 1] + 0.5, knn_patch[j, 2] + 0.5 - 0.0125, config, [])
+            color = generate_pos_colormap(knn_patch[j] + 0.5, config)
             xml_segments.append(xml_object_segment.format(knn_patch[j, 0], knn_patch[j, 1], knn_patch[j, 2], *color))
 
         xml_segments.append(xml_tail)
@@ -119,10 +92,6 @@ def render_part(config, pcl):
         # To prevent errors in the output image, we delay some seconds
         time.sleep(int(config.res[0]) / 1000)
         os.remove(xmlFile)
-
-
-def distance(p1, p2):
-    return np.sqrt(np.sum(np.square(p1 - p2)))
 
 
 def real_time_tool(config, pcl):

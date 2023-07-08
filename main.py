@@ -1,6 +1,6 @@
 import argparse
 import numpy as np
-from utils import load, standardize_bbox, load_self_colormap, rotation
+from utils import load, standardize_bbox, color_map, rotation
 from render import render, render_part, real_time_tool
 
 
@@ -15,7 +15,6 @@ def parse_args():
     parser.add_argument('--part', help='perform KNN clustering on the objects and render each segment separately', action='store_true')
     parser.add_argument('--white', help='render white object', action='store_true')
     parser.add_argument('--RGB', nargs='+', help='render object with specific RGB value', default=[])
-    parser.add_argument('--value_path', help='point heat map value', default='')
     parser.add_argument('--rot', nargs='+', help='rotation angle from x,y,z', default=[])
     parser.add_argument('--workdir', type=str, help='workdir', default='workdir')
     parser.add_argument('--output', type=str, help='output file name', default='result.jpg')
@@ -25,7 +24,7 @@ def parse_args():
     parser.add_argument('--separator', type=str, help='text separator', default=",")
     parser.add_argument('--type', type=str, help='render type, include point and voxel', default="point")
     parser.add_argument('--mask', help='mask the point cloud', action='store_true')
-    parser.add_argument('--view', nargs='+', help='the x,y,z position of camera view point', default=[3, 3, 3])
+    parser.add_argument('--view', nargs='+', help='the x,y,z position of camera view point', default=[2.75, 2.75, 2.75])
     parser.add_argument('--translate', nargs='+', help='the x,y,z position of object translate', default=[0, 0, 0])
     parser.add_argument('--scale', nargs='+', help='the x,y,z scale of object', default=[1, 1, 1])
 
@@ -43,24 +42,17 @@ def main():
     # load the point cloud
     pcl = load(config.path, config.separator)
 
+    # standardize the point cloud
+    pcl = standardize_bbox(config, pcl)
+
     # rotate the point
     if len(config.rot) != 0:
         assert len(config.rot) == 3
         rot_matrix = rotation(config.rot)
         pcl[:, :3] = np.matmul(pcl[:, :3], rot_matrix)
 
-    # if rander the point with self colormap
-    if config.value_path != "":
-        color = load_self_colormap(config.value_path)
-        pcl = np.concatenate((pcl[:, :3], color), axis=1)
-
-    if config.num < pcl.shape[0]:
-        print(f'downsample to {config.num} points')
-        pt_indices = np.random.choice(pcl.shape[0], config.num, replace=False)
-        np.random.shuffle(pt_indices)
-        pcl = pcl[pt_indices]
-
-    pcl = standardize_bbox(pcl)
+    # color the point cloud
+    pcl = color_map(config, pcl)
 
     if config.part:
         render_part(config, pcl)

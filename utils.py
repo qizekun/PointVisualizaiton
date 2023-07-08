@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 from plyfile import PlyData
+from scipy.spatial import distance
 
 
 def load(path, separator=','):
@@ -42,9 +43,50 @@ def load(path, separator=','):
     return pcl
 
 
-def load_self_colormap(value_path):
-    vec = load(path=value_path)  # load the value of each point, and the shape is (N)
-    vec = np.power(vec, 2)  # You can adjust the Level Curve with gamma transformation
+def color_map(config, pcl):
+    n, c = pcl.shape
+    if config.white:
+        print("render with white color.")
+        color = np.ones((n, 3)) * 0.6
+    elif len(config.RGB) == 3:
+        print("render with input RGB color.")
+        rgb = np.array(list(map(float, config.RGB))) / 255
+        color = np.tile(rgb, (n, 1))
+    elif c == 6:
+        print("render with points color.")
+        color = pcl[:, 3:]
+    elif c == 4:
+        print("render with 1-d value color.")
+        color = load_self_colormap(pcl[:, 3])
+    elif config.knn:
+        print("render with knn color.")
+        color = np.zeros((n, 3))
+        knn_center = fps(pcl + 0.5, config.center_num)
+        for i in range(n):
+            color[i] = generate_knn_pos_colormap(pcl[i] + 0.5, config, knn_center)
+    else:
+        print("render with position color.")
+        color = np.zeros((n, 3))
+        for i in range(n):
+            color[i] = generate_pos_colormap(pcl[i] + 0.5, config)
+
+    return np.concatenate((pcl[:, :3], color), axis=1)
+
+
+def mask_point(pcl, mask_center=128, mask_ratio=0.5):
+    mask_center = fps(pcl[:, :3], mask_center)
+    mask_center = mask_center[:int(mask_center * mask_ratio)]
+    new_pcl = []
+    for i in range(pcl.shape[0]):
+        distances = distance.cdist(pcl[i, :3], mask_center, 'euclidean')
+        if np.min(distances) > 0.05:
+            new_pcl.append(pcl[i])
+    new_pcl = np.array(new_pcl)
+    return new_pcl
+
+
+def load_self_colormap(value):
+    vec = np.power(value, 2)  # You can adjust the Level Curve with gamma transformation
     vec = 255 - 255 * (vec - np.min(vec)) / (np.max(vec) - np.min(vec))  # normalize to [0, 255]
     vec = vec.reshape(1, -1).astype(np.uint8)
     vec = cv2.applyColorMap(vec, cv2.COLORMAP_JET)  # apply colormap
@@ -53,36 +95,46 @@ def load_self_colormap(value_path):
     return color
 
 
-def generate_pos_colormap(x, y, z, config, knn_center=[]):
-    vec = np.array([x, y, z])
-    if knn_center != []:
-        dis = np.linalg.norm(knn_center - vec, axis=1)
-        index = np.argmin(dis)
-        vec = knn_center[index]
+def generate_pos_colormap(pos, config):
+    vec = np.clip(pos, config.contrast, 1.0)
+    norm = np.sqrt(np.sum(vec ** 2))
+    vec /= norm
+    return vec
+
+
+def generate_knn_pos_colormap(pos, config, knn_center):
+    dis = np.linalg.norm(knn_center - pos, axis=1)
+    index = np.argmin(dis)
+    vec = knn_center[index]
 
     vec = np.clip(vec, config.contrast, 1.0)
     norm = np.sqrt(np.sum(vec ** 2))
     vec /= norm
+    return vec
 
-    return [vec[0], vec[1], vec[2]]
 
-
-def standardize_bbox(data):
+def standardize_bbox(config, data):
     pcl = data[:, :3]
     mins = np.amin(pcl, axis=0)
     maxs = np.amax(pcl, axis=0)
     center = (mins + maxs) / 2.
     scale = np.amax(maxs - mins)
-    result = ((pcl - center) / scale).astype(np.float32)  # [-0.5, 0.5]
+    pcl = ((pcl - center) / scale).astype(np.float32)  # [-0.5, 0.5]
     print("Center: {}, Scale: {}".format(center, scale))
-    
+
     if data.shape[1] == 6:
         color = data[:, 3:]
         color[color < 0] = 0
         color[color > 1] = 1
-        result = np.concatenate((result, color), axis=1)
-        
-    return result
+        pcl = np.concatenate((pcl, color), axis=1)
+
+    if config.num < pcl.shape[0]:
+        print(f'downsample to {config.num} points')
+        pt_indices = np.random.choice(pcl.shape[0], config.num, replace=False)
+        np.random.shuffle(pt_indices)
+        pcl = pcl[pt_indices]
+
+    return pcl
 
 
 def fps(data, k):
@@ -168,7 +220,7 @@ def get_xml(resolution=[1920, 1080], view=[3, 3, 3], radius=0.025, object_type="
             </bsdf>
         </shape>
     """ % radius
-    
+
     xml_cube_segment = \
         """
         <shape type="cube">
@@ -188,7 +240,7 @@ def get_xml(resolution=[1920, 1080], view=[3, 3, 3], radius=0.025, object_type="
             <ref name="bsdf" id="surfaceMaterial"/>
             <transform name="toWorld">
                 <scale x="100" y="100" z="2"/>
-                <translate x="0" y="0" z="-0.5"/>
+                <translate x="0" y="0" z="-0.3"/>
             </transform>
         </shape>
 
