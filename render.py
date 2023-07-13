@@ -21,7 +21,7 @@ def render(config, pcl):
     scale = list(map(float, config.scale))
 
     for i in range(pcl.shape[0]):
-        y, z, x = pcl[i, :3] * scale + translate
+        x, y, z = np.roll(pcl[i, :3], 1) * scale + translate
         color = pcl[i, 3:]
         xml_segments.append(xml_object_segment.format(x, y, z, *color))
 
@@ -29,7 +29,7 @@ def render(config, pcl):
     xml_content = str.join('', xml_segments)
 
     os.makedirs(config.workdir, exist_ok=True)
-    xmlFile = f'{config.workdir}/{file_name}.xml'
+    xmlFile = f'{config.workdir}/{file_name.split("/")[-1]}.xml'
     with open(xmlFile, 'w') as f:
         f.write(xml_content)
     f.close()
