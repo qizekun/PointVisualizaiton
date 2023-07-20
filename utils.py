@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 from plyfile import PlyData
 from scipy.spatial import distance
+from scipy.ndimage import median_filter, uniform_filter
+from skimage.measure import marching_cubes
 
 
 def load(path, separator=','):
@@ -115,6 +117,11 @@ def generate_knn_pos_colormap(pos, config, knn_center):
 
 def standardize_bbox(config, data):
     pcl = data[:, :3]
+    C = data.shape[1]
+
+    if config.median:
+        pcl = median_filter_3d(pcl)
+
     mins = np.amin(pcl, axis=0)
     maxs = np.amax(pcl, axis=0)
     center = (mins + maxs) / 2.
@@ -122,7 +129,7 @@ def standardize_bbox(config, data):
     pcl = ((pcl - center) / scale).astype(np.float32)  # [-0.5, 0.5]
     print("Center: {}, Scale: {}".format(center, scale))
 
-    if data.shape[1] == 6:
+    if C == 6:
         color = data[:, 3:]
         color[color < 0] = 0
         color[color > 1] = 1
@@ -156,6 +163,51 @@ def fps(data, k):
         points = points[mask]
         distance = distance[mask]
     return sample_data
+
+
+def median_filter_3d(pcl, channel=3, voxel_size=64, kernel_size=2, level=0.5, times=1):
+    print("using median filter")
+    for i in range(times):
+        voxel = point_cloud_to_voxel(pcl, voxel_size=voxel_size)
+        voxel = median_filter(voxel, size=kernel_size)
+        median_pcl = voxel_to_point_cloud(voxel, level=level)
+        N = median_pcl.shape[0]
+        new_pcl = np.zeros((N, channel))
+        if channel == 6:
+            for i in range(N):
+                distances = distance.cdist(median_pcl[i, :3], pcl[:, :3], 'euclidean')
+                index = np.argmin(distances)
+                new_pcl[i, :3] = median_pcl[i, :3]
+                new_pcl[i, 3:] = pcl[index, 3:]
+        else:
+            new_pcl = median_pcl
+        pcl = new_pcl
+    print("filtered point cloud shape: ", pcl.shape)
+    return pcl
+
+
+def point_cloud_to_voxel(point_cloud, voxel_size):
+    R = voxel_size
+    voxel_shape = (R, R, R)
+
+    voxel_data = np.zeros(voxel_shape, dtype=np.int32)
+
+    min_bound = np.min(point_cloud, axis=0)
+    point_cloud = point_cloud - min_bound
+    max_bound = np.max(np.max(point_cloud, axis=0))
+
+    point_cloud_scaled = point_cloud / max_bound * (R - 1)
+
+    for point in point_cloud_scaled:
+        voxel_index = np.floor(point).astype(int)
+        voxel_data[voxel_index[0], voxel_index[1], voxel_index[2]] = 1
+
+    return voxel_data
+
+
+def voxel_to_point_cloud(voxel, level):
+    pts, _, _, _ = marching_cubes(voxel, level=level)
+    return pts
 
 
 def rotation(rotation_angle):

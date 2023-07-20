@@ -27,6 +27,7 @@ def parse_args():
     parser.add_argument('--view', nargs='+', help='the x,y,z position of camera view point', default=[2.75, 2.75, 2.75])
     parser.add_argument('--translate', nargs='+', help='the x,y,z position of object translate', default=[0, 0, 0])
     parser.add_argument('--scale', nargs='+', help='the x,y,z scale of object', default=[1, 1, 1])
+    parser.add_argument('--median', help='using median filter', action='store_true')
 
     args = parser.parse_args()
     return args
