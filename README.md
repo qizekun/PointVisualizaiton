@@ -39,6 +39,9 @@ python main.py --path <file path> --render --radius 0.03 --num 384 --type voxel
 
 # view real time point cloud
 python main.py --path <file path> --tool
+
+# view real time colorful point cloud with bbox
+python main.py --path furniture.npy --tool --bbox bbox.npy
 ```
 
 ![figure](fig/color.jpg)

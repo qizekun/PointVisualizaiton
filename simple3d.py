@@ -35,9 +35,8 @@ cv2.moveWindow('show3d', 0, 0)
 cv2.setMouseCallback('show3d', onmouse)
 
 
-def showpoints(pts, config, bbox=None, c0=None, c1=None, c2=None, waittime=0, showrot=False, magnifyBlue=0,
-               freezerot=False,
-               background=(255, 255, 255), normalizecolor=True):
+def showpoints(pts, config, bbox=None, waittime=0, showrot=False, magnifyBlue=0,
+               freezerot=False, background=(255, 255, 255)):
     global showsz, mousex, mousey, zoom, changed
 
     xyz = pts[:, :3]
@@ -56,17 +55,6 @@ def showpoints(pts, config, bbox=None, c0=None, c1=None, c2=None, waittime=0, sh
         xyz = xyz - xyz.mean(axis=0)
         radius = ((xyz ** 2).sum(axis=-1) ** 0.5).max()
         xyz /= (radius * 2.2) / showsz
-
-    if c0 is None:
-        c0 = np.zeros((len(xyz),), dtype='float32')
-    if c1 is None:
-        c1 = c0
-    if c2 is None:
-        c2 = c0
-    if normalizecolor:
-        c0 /= (c0.max() + 1e-14) / 255.0
-        c1 /= (c1.max() + 1e-14) / 255.0
-        c2 /= (c2.max() + 1e-14) / 255.0
 
     show = np.zeros((showsz, showsz, 3), dtype='uint8')
 
@@ -102,35 +90,25 @@ def showpoints(pts, config, bbox=None, c0=None, c1=None, c2=None, waittime=0, sh
 
         if bbox is not None:
             interpolated_list = [bbox,
-                                 np.linspace(bbox[0], bbox[1], 50),
-                                 np.linspace(bbox[1], bbox[2], 50),
-                                 np.linspace(bbox[2], bbox[3], 50),
-                                 np.linspace(bbox[3], bbox[0], 50),
-                                 np.linspace(bbox[4], bbox[5], 50),
-                                 np.linspace(bbox[5], bbox[6], 50),
-                                 np.linspace(bbox[6], bbox[7], 50),
-                                 np.linspace(bbox[7], bbox[4], 50),
-                                 np.linspace(bbox[0], bbox[4], 50),
-                                 np.linspace(bbox[1], bbox[5], 50),
-                                 np.linspace(bbox[2], bbox[6], 50),
-                                 np.linspace(bbox[3], bbox[7], 50)]
+                                 np.linspace(bbox[0], bbox[1], 100),
+                                 np.linspace(bbox[1], bbox[2], 100),
+                                 np.linspace(bbox[2], bbox[3], 100),
+                                 np.linspace(bbox[3], bbox[0], 100),
+                                 np.linspace(bbox[4], bbox[5], 100),
+                                 np.linspace(bbox[5], bbox[6], 100),
+                                 np.linspace(bbox[6], bbox[7], 100),
+                                 np.linspace(bbox[7], bbox[4], 100),
+                                 np.linspace(bbox[0], bbox[4], 100),
+                                 np.linspace(bbox[1], bbox[5], 100),
+                                 np.linspace(bbox[2], bbox[6], 100),
+                                 np.linspace(bbox[3], bbox[7], 100)]
             bbox = np.concatenate(interpolated_list, axis=0)
 
-            nxyz = bbox.dot(rotmat)
-            nz = nxyz[:, 1].argsort()
-            nxyz = nxyz[nz]
-            nxyz = (nxyz[:, :2] + [showsz / 2, showsz / 2]).astype('int32')
-            p = nxyz[:, 0] * showsz + nxyz[:, 1]
-            m = (nxyz[:, 0] >= 0) * (nxyz[:, 0] < showsz) * (nxyz[:, 1] >= 0) * (nxyz[:, 1] < showsz)
-            c00 = np.zeros((len(bbox),), dtype='float32')
-            c01 = np.ones((len(bbox),), dtype='float32') + 255.0
-            c02 = np.zeros((len(bbox),), dtype='float32')
-            c00 /= (c00.max() + 1e-14) / 255.0
-            c01 /= (c01.max() + 1e-14) / 255.0
-            c02 /= (c02.max() + 1e-14) / 255.0
-            show.reshape((showsz * showsz, 3))[p[m], 1] = c00[nz][m]
-            show.reshape((showsz * showsz, 3))[p[m], 2] = c01[nz][m]
-            show.reshape((showsz * showsz, 3))[p[m], 0] = c02[nz][m]
+            nbbox = bbox.dot(rotmat)
+            nbbox = (nbbox[:, :2] + [showsz / 2, showsz / 2]).astype('int32')
+            p = nbbox[:, 0] * showsz + nbbox[:, 1]
+            m = (nbbox[:, 0] >= 0) * (nbbox[:, 0] < showsz) * (nbbox[:, 1] >= 0) * (nbbox[:, 1] < showsz)
+            show.reshape((showsz * showsz, 3))[p[m]] = [0, 0, 255]
 
         if magnifyBlue > 0:
             show[:, :, 0] = np.maximum(show[:, :, 0], np.roll(show[:, :, 0], 1, axis=0))

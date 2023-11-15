@@ -47,7 +47,7 @@ def main():
 
     if config.tool:
         bbox = None if config.bbox == 'none' else np.load(config.bbox)
-        real_time_tool(config, pcl, bbox)
+        real_time_tool(pcl, config, bbox)
     else:
         # standardize the point cloud
         pcl = standardize_bbox(config, pcl)

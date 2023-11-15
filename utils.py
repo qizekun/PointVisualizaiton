@@ -21,7 +21,7 @@ def load(path, separator=','):
         if len(vertex.properties) == 6:
             (r, g, b) = (vertex[t] for t in ('red', 'green', 'blue'))
             pcl = np.column_stack((pcl, r, g, b))
-            pcl[:,3:] = pcl[:,3:] / 255 if pcl[:,3:].max() > 1.0 else pcl
+            pcl[:, 3:] = pcl[:, 3:] / 255 if pcl[:, 3:].max() > 1.0 else pcl
     elif extension == 'txt':
         f = open(path, 'r')
         line = f.readline()
