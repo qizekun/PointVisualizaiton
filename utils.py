@@ -12,7 +12,7 @@ def load(path, separator=','):
         pcl = np.load(path, allow_pickle=True)
     elif extension == 'npz':
         pcl = np.load(path)
-        pcl = pcl['pred']
+        pcl = pcl['arr_0']
     elif extension == 'ply':
         ply = PlyData.read(path)
         vertex = ply['vertex']
@@ -28,7 +28,7 @@ def load(path, separator=','):
             line = f.readline()
         f.close()
         pcl = np.array(data)
-    elif extension == 'pth':
+    elif extension == 'pth' or extension == 'pt':
         import torch
         pcl = torch.load(path, map_location='cpu')
         pcl = pcl.detach().numpy()
@@ -36,6 +36,10 @@ def load(path, separator=','):
         print('unsupported file format.')
         raise FileNotFoundError
 
+    if pcl.shape[0] in [3, 6]:
+        pcl = pcl.T
+
+    pcl = np.array(pcl)
     print(f'point cloud shape: {pcl.shape}')
     assert pcl.shape[-1] == 3 or pcl.shape[-1] == 6
 

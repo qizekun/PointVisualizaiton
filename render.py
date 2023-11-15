@@ -2,7 +2,6 @@ import os
 import time
 import numpy as np
 import mitsuba as mi
-import simple3d
 from utils import standardize_bbox, generate_pos_colormap, get_xml, fps, mask_point
 
 
@@ -92,7 +91,3 @@ def render_part(config, pcl):
         # To prevent errors in the output image, we delay some seconds
         time.sleep(int(config.res[0]) / 1000)
         os.remove(xmlFile)
-
-
-def real_time_tool(config, pcl):
-    simple3d.showpoints(pcl, config)

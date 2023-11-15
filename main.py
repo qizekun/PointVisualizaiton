@@ -1,7 +1,8 @@
 import argparse
 import numpy as np
 from utils import load, standardize_bbox, color_map, rotation
-from render import render, render_part, real_time_tool
+from render import render, render_part
+from simple3d import showpoints as real_time_tool
 
 
 def parse_args():
@@ -28,6 +29,7 @@ def parse_args():
     parser.add_argument('--translate', nargs='+', help='the x,y,z position of object translate', default=[0, 0, 0])
     parser.add_argument('--scale', nargs='+', help='the x,y,z scale of object', default=[1, 1, 1])
     parser.add_argument('--median', help='using median filter', action='store_true')
+    parser.add_argument('--bbox', type=str, help='realtime tools bbox visualization', default='none')
 
     args = parser.parse_args()
     return args
@@ -43,24 +45,26 @@ def main():
     # load the point cloud
     pcl = load(config.path, config.separator)
 
-    # standardize the point cloud
-    pcl = standardize_bbox(config, pcl)
-
-    # rotate the point
-    if len(config.rot) != 0:
-        assert len(config.rot) == 3
-        rot_matrix = rotation(config.rot)
-        pcl[:, :3] = np.matmul(pcl[:, :3], rot_matrix)
-
-    # color the point cloud
-    pcl = color_map(config, pcl)
-
-    if config.part:
-        render_part(config, pcl)
-    elif config.render:
-        render(config, pcl)
+    if config.tool:
+        bbox = None if config.bbox == 'none' else np.load(config.bbox)
+        real_time_tool(config, pcl, bbox)
     else:
-        real_time_tool(config, pcl[:, :3])
+        # standardize the point cloud
+        pcl = standardize_bbox(config, pcl)
+
+        # rotate the point
+        if len(config.rot) != 0:
+            assert len(config.rot) == 3
+            rot_matrix = rotation(config.rot)
+            pcl[:, :3] = np.matmul(pcl[:, :3], rot_matrix)
+
+        # color the point cloud
+        pcl = color_map(config, pcl)
+
+        if config.part:
+            render_part(config, pcl)
+        elif config.render:
+            render(config, pcl)
 
 
 if __name__ == '__main__':
