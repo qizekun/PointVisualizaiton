@@ -41,7 +41,10 @@ def showpoints(pts, config, bbox=None, waittime=0, showrot=False, magnifyBlue=0,
 
     xyz = pts[:, :3]
     if pts.shape[-1] == 6:
-        rgb = pts[:, 3:] * 255.0
+        if pts[:, 3:].max() <= 1 + 1e-2:
+            rgb = pts[:, 3:] * 255.0
+        else:
+            rgb = pts[:, 3:]
     else:
         rgb = np.zeros_like(xyz)
 
@@ -81,11 +84,15 @@ def showpoints(pts, config, bbox=None, waittime=0, showrot=False, magnifyBlue=0,
         rotmat *= zoom
         nxyz = xyz.dot(rotmat)
         result = nxyz.copy()
+        nz = nxyz[:, 1].argsort()
+        nxyz = nxyz[nz]
+        nrgb = rgb[nz]
         nxyz = (nxyz[:, :2] + [showsz / 2, showsz / 2]).astype('int32')
         p = nxyz[:, 0] * showsz + nxyz[:, 1]
         show[:] = background
         m = (nxyz[:, 0] >= 0) * (nxyz[:, 0] < showsz) * (nxyz[:, 1] >= 0) * (nxyz[:, 1] < showsz)
-        nrgb = rgb[:, [2, 1, 0]]
+        if not config.bgr2rgb:
+            nrgb = nrgb[:, [2, 1, 0]]
         show.reshape((showsz * showsz, 3))[p[m]] = nrgb[m]
 
         if bbox is not None:
@@ -103,6 +110,14 @@ def showpoints(pts, config, bbox=None, waittime=0, showrot=False, magnifyBlue=0,
                                  np.linspace(bbox[2], bbox[6], 100),
                                  np.linspace(bbox[3], bbox[7], 100)]
             bbox = np.concatenate(interpolated_list, axis=0)
+
+            bbox1 = bbox.copy()
+            bbox1[:, 0] = bbox1[:, 0] + radius
+            bbox2 = bbox.copy()
+            bbox2[:, 1] = bbox2[:, 1] + radius
+            bbox3 = bbox.copy()
+            bbox3[:, 2] = bbox3[:, 2] + radius
+            bbox = np.concatenate([bbox, bbox1, bbox2, bbox3], axis=0)
 
             nbbox = bbox.dot(rotmat)
             nbbox = (nbbox[:, :2] + [showsz / 2, showsz / 2]).astype('int32')
@@ -149,7 +164,14 @@ def showpoints(pts, config, bbox=None, waittime=0, showrot=False, magnifyBlue=0,
             zoom = 1.0
             changed = True
         elif cmd == ord('s'):
-            cv2.imwrite(config.output, show)
+            img = np.array(show.data, dtype=np.uint8)
+            image_with_alpha = np.zeros((800, 800, 4), dtype=np.uint8)
+            image_with_alpha[:, :, :3] = img
+            image_with_alpha[:, :, 3] = 255
+            white_areas = (image_with_alpha[:, :, 0] == 255) & (image_with_alpha[:, :, 1] == 255) & (
+                    image_with_alpha[:, :, 2] == 255)
+            image_with_alpha[white_areas, 3] = 0
+            cv2.imwrite(config.output, image_with_alpha)
         elif cmd == ord('p'):
             write_ply(config.output.split(".")[0] + ".ply", result)
         if waittime != 0:

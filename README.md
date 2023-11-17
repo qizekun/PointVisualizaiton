@@ -17,7 +17,7 @@ pip install -r requirements.txt
 
 ```bash
 # Render a single file to colorful image
-python main.py --path <file path> --render
+python main.py --path example/chair.npy --render
 
 # Render a single file to knn cluster colorful image
 python main.py --path <file path> --render --knn
@@ -41,7 +41,7 @@ python main.py --path <file path> --render --radius 0.03 --num 384 --type voxel
 python main.py --path <file path> --tool
 
 # view real time colorful point cloud with bbox
-python main.py --path furniture.npy --tool --bbox bbox.npy
+python main.py --path example/furniture.npy --tool --bbox example/bbox.npy --BGR
 ```
 
 ![figure](fig/color.jpg)

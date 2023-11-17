@@ -18,7 +18,7 @@ def parse_args():
     parser.add_argument('--RGB', nargs='+', help='render object with specific RGB value', default=[])
     parser.add_argument('--rot', nargs='+', help='rotation angle from x,y,z', default=[])
     parser.add_argument('--workdir', type=str, help='workdir', default='workdir')
-    parser.add_argument('--output', type=str, help='output file name', default='result.jpg')
+    parser.add_argument('--output', type=str, help='output file name', default='result.png')
     parser.add_argument('--res', nargs='+', help='output file resolution', default=[800, 800])
     parser.add_argument('--radius', type=float, help='radius', default=0.025)
     parser.add_argument('--contrast', type=float, help='contrast', default=0.0004)
@@ -30,6 +30,7 @@ def parse_args():
     parser.add_argument('--scale', nargs='+', help='the x,y,z scale of object', default=[1, 1, 1])
     parser.add_argument('--median', help='using median filter', action='store_true')
     parser.add_argument('--bbox', type=str, help='realtime tools bbox visualization', default='none')
+    parser.add_argument('--bgr2rgb', help='BGR to RGB', action='store_true')
 
     args = parser.parse_args()
     return args

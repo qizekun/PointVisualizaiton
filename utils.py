@@ -40,12 +40,12 @@ def load(path, separator=','):
         print('unsupported file format.')
         raise FileNotFoundError
 
-    if pcl.shape[0] in [3, 6]:
+    if pcl.shape[0] in [3, 4, 6]:
         pcl = pcl.T
 
     pcl = np.array(pcl)
     print(f'point cloud shape: {pcl.shape}')
-    assert pcl.shape[-1] == 3 or pcl.shape[-1] == 6
+    assert pcl.shape[-1] == 3 or pcl.shape[-1] == 6 or pcl.shape[-1] == 4
 
     if len(pcl.shape) == 3:
         pcl = pcl[0]
@@ -141,6 +141,12 @@ def standardize_bbox(config, data):
         color = data[:, 3:]
         color[color < 0] = 0
         color[color > 1] = 1
+        pcl = np.concatenate((pcl, color), axis=1)
+    elif C == 4:
+        color = data[:, 3:]
+        color = (color - np.min(color)) / (np.max(color) - np.min(color))
+        # gamma transformation
+        color = np.power(color, 0.5)
         pcl = np.concatenate((pcl, color), axis=1)
 
     if config.num < pcl.shape[0]:
