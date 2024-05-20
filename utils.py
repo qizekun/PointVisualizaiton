@@ -18,7 +18,7 @@ def load(path, separator=','):
         vertex = ply['vertex']
         (x, y, z) = (vertex[t] for t in ('x', 'y', 'z'))
         pcl = np.column_stack((x, y, z))
-        if len(vertex.properties) == 6:
+        if 'red' in vertex and 'green' in vertex and 'blue' in vertex:
             (r, g, b) = (vertex[t] for t in ('red', 'green', 'blue'))
             pcl = np.column_stack((pcl, r, g, b))
             pcl[:, 3:] = pcl[:, 3:] / 255 if pcl[:, 3:].max() > 1.0 else pcl
