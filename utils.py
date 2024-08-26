@@ -4,6 +4,7 @@ from plyfile import PlyData
 from scipy.spatial import distance
 from scipy.ndimage import median_filter, uniform_filter
 from skimage.measure import marching_cubes
+from sklearn.neighbors import NearestNeighbors
 
 
 def load(path, separator=','):
@@ -55,27 +56,37 @@ def load(path, separator=','):
 
 def color_map(config, pcl):
     n, c = pcl.shape
+
     if config.white:
-        print("render with white color.")
+        print("Rendered with white color.")
         color = np.ones((n, 3)) * 0.6
     elif len(config.RGB) == 3:
-        print("render with input RGB color.")
+        print("Rendered with input RGB color.")
         rgb = np.array(list(map(float, config.RGB))) / 255
         color = np.tile(rgb, (n, 1))
     elif c == 6:
-        print("render with points color.")
+        print("Rendered with points color.")
         color = pcl[:, 3:]
+        if color.max() > 1 + 1e-2:
+            color = color / 255
+            print("Normalize points color from 255 to 1.")
+        color[color < 0] = 0
+        color[color > 1] = 1
     elif c == 4:
-        print("render with 1-d value color.")
-        color = load_self_colormap(pcl[:, 3])
+        color = pcl[:, 3]
+        color = (color - np.min(color)) / (np.max(color) - np.min(color))
+        # gamma transformation
+        color = np.power(color, 0.5)
+        print("Rendered with 1-d value color.")
+        color = load_self_colormap(color)
     elif config.knn:
-        print("render with knn color.")
+        print("Rendered with knn color.")
         color = np.zeros((n, 3))
         knn_center = fps(pcl + 0.5, config.center_num)
         for i in range(n):
             color[i] = generate_knn_pos_colormap(pcl[i] + 0.5, config, knn_center)
     else:
-        print("render with position color.")
+        print("Rendered with position color.")
         color = np.zeros((n, 3))
         for i in range(n):
             color[i] = generate_pos_colormap(pcl[i] + 0.5, config)
@@ -124,30 +135,22 @@ def generate_knn_pos_colormap(pos, config, knn_center):
 
 
 def standardize_bbox(config, data):
-    pcl = data[:, :3]
-    C = data.shape[1]
+    xyz = data[:, :3]
 
     if config.median:
-        pcl = median_filter_3d(pcl)
+        xyz = median_filter_3d(xyz)
 
-    mins = np.amin(pcl, axis=0)
-    maxs = np.amax(pcl, axis=0)
+    mins = np.amin(xyz, axis=0)
+    maxs = np.amax(xyz, axis=0)
     center = (mins + maxs) / 2.
     scale = np.amax(maxs - mins)
-    pcl = ((pcl - center) / scale).astype(np.float32)  # [-0.5, 0.5]
+    xyz = ((xyz - center) / scale).astype(np.float32)  # [-0.5, 0.5]
     print("Center: {}, Scale: {}".format(center, scale))
 
-    if C == 6:
-        color = data[:, 3:]
-        color[color < 0] = 0
-        color[color > 1] = 1
-        pcl = np.concatenate((pcl, color), axis=1)
-    elif C == 4:
-        color = data[:, 3:]
-        color = (color - np.min(color)) / (np.max(color) - np.min(color))
-        # gamma transformation
-        color = np.power(color, 0.5)
-        pcl = np.concatenate((pcl, color), axis=1)
+    if data.shape[-1] > 3:
+        pcl = np.concatenate((xyz, data[:, 3:]), axis=1)
+    else:
+        pcl = xyz
 
     if config.num < pcl.shape[0]:
         print(f'downsample to {config.num} points')
@@ -155,7 +158,7 @@ def standardize_bbox(config, data):
         np.random.shuffle(pt_indices)
         pcl = pcl[pt_indices]
 
-    return pcl
+    return pcl, center, scale
 
 
 def fps(data, k):
@@ -236,6 +239,62 @@ def rotation(rotation_angle):
 
     rot_matrix = np.dot(np.dot(rot_z, rot_y), rot_x)
     return rot_matrix
+
+
+def interpolate_point_cloud(points, num):
+    N, _ = points.shape
+    k = int(num / N) + 1
+
+    nn = NearestNeighbors(n_neighbors=k * k, algorithm='ball_tree').fit(points[:, :3])
+    distances, indices = nn.kneighbors(points[:, :3])
+
+    interpolated_points = []
+    for i in range(N):
+        neighbors_indices = indices[i, 1:]
+        neighbors = points[neighbors_indices]
+        selected_points = np.random.choice(neighbors.shape[0], k, replace=False)
+        neighbors = neighbors[selected_points]
+
+        interpolated_point = (points[i] + neighbors) / 2.0
+        interpolated_points.append(interpolated_point)
+
+    interpolated_points = np.concatenate(interpolated_points, axis=0)
+    sampled_points = np.concatenate([points, interpolated_points], axis=0)
+    # sampled_points = fps(sampled_points, num)
+    pt_indices = np.random.choice(sampled_points.shape[0], num, replace=False)
+    np.random.shuffle(pt_indices)
+    sampled_points = sampled_points[pt_indices]
+
+    return sampled_points
+
+
+def filter_point_cloud(point_cloud, angle_threshold_degrees=90):
+    # Extract XYZ coordinates from the point cloud
+    xyz = point_cloud[:, :3]
+
+    # Center the point cloud at the origin and normalize
+    center = np.mean(xyz, axis=0)
+    normalized_xyz = (xyz - center) / np.linalg.norm(xyz - center, axis=1)[:, np.newaxis]
+
+    # Randomly select a point within a sphere of radius sqrt(2)
+    # angles = np.random.uniform(0, np.pi)
+    angles = np.pi / 2
+    x = np.cos(angles)
+    y = - np.sin(angles)
+    random_point = np.array([x, y, 0])
+    # random_point = np.array([0.8, x, y])
+
+    # Calculate angles between the random point and all points in the normalized point cloud
+    angles = np.arccos(np.dot(normalized_xyz, random_point.T))
+
+    # Filter points based on the angle threshold
+    filtered_indices = np.where(np.degrees(angles) < angle_threshold_degrees)[0]
+
+    # Keep only the selected points
+    selected_points = point_cloud[filtered_indices]
+
+    return selected_points
+
 
 
 def get_xml(resolution=[1920, 1080], view=[3, 3, 3], radius=0.025, object_type="point"):

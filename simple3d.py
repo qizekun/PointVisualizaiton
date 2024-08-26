@@ -35,9 +35,14 @@ cv2.moveWindow('show3d', 0, 0)
 cv2.setMouseCallback('show3d', onmouse)
 
 
-def showpoints(pts, config, bbox=None, waittime=0, showrot=False, magnifyBlue=0,
+def showpoints(pts, center, scale, config, bbox=None, waittime=0, showrot=False, magnifyBlue=0,
                freezerot=False, background=(255, 255, 255)):
     global showsz, mousex, mousey, zoom, changed
+
+    # bbox = np.array(
+    #     [[-0.53, -0.07, 0.01], [-0.57, -0.05, 0.01], [-0.57, -0.05, -0.03], [-0.53, -0.07, -0.03], [-0.58, -0.21, 0.01],
+    #      [-0.62, -0.19, 0.01], [-0.62, -0.19, -0.03], [-0.58, -0.21, -0.03]]
+    # )
 
     xyz = pts[:, :3]
     if pts.shape[-1] == 6:
@@ -49,15 +54,9 @@ def showpoints(pts, config, bbox=None, waittime=0, showrot=False, magnifyBlue=0,
         rgb = np.zeros_like(xyz)
 
     if bbox is not None:
-        bbox = bbox - xyz.mean(axis=0)
-        xyz = xyz - xyz.mean(axis=0)
-        radius = ((xyz ** 2).sum(axis=-1) ** 0.5).max()
-        bbox /= (radius * 2.2) / showsz
-        xyz /= (radius * 2.2) / showsz
-    else:
-        xyz = xyz - xyz.mean(axis=0)
-        radius = ((xyz ** 2).sum(axis=-1) ** 0.5).max()
-        xyz /= (radius * 2.2) / showsz
+        bbox = (bbox - center) / scale
+        bbox *= showsz / 1.5
+    xyz *= showsz / 1.5
 
     show = np.zeros((showsz, showsz, 3), dtype='uint8')
 
@@ -112,11 +111,11 @@ def showpoints(pts, config, bbox=None, waittime=0, showrot=False, magnifyBlue=0,
             bbox = np.concatenate(interpolated_list, axis=0)
 
             bbox1 = bbox.copy()
-            bbox1[:, 0] = bbox1[:, 0] + radius
+            bbox1[:, 0] = bbox1[:, 0] + 1
             bbox2 = bbox.copy()
-            bbox2[:, 1] = bbox2[:, 1] + radius
+            bbox2[:, 1] = bbox2[:, 1] + 1
             bbox3 = bbox.copy()
-            bbox3[:, 2] = bbox3[:, 2] + radius
+            bbox3[:, 2] = bbox3[:, 2] + 1
             bbox = np.concatenate([bbox, bbox1, bbox2, bbox3], axis=0)
 
             nbbox = bbox.dot(rotmat)
@@ -165,7 +164,7 @@ def showpoints(pts, config, bbox=None, waittime=0, showrot=False, magnifyBlue=0,
             changed = True
         elif cmd == ord('s'):
             img = np.array(show.data, dtype=np.uint8)
-            image_with_alpha = np.zeros((800, 800, 4), dtype=np.uint8)
+            image_with_alpha = np.zeros((showsz, showsz, 4), dtype=np.uint8)
             image_with_alpha[:, :, :3] = img
             image_with_alpha[:, :, 3] = 255
             white_areas = (image_with_alpha[:, :, 0] == 255) & (image_with_alpha[:, :, 1] == 255) & (

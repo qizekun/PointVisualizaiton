@@ -6,3 +6,4 @@ plyfile
 torch
 scipy
 scikit-image
+scikit-learn

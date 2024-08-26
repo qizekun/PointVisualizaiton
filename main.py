@@ -1,3 +1,4 @@
+import time
 import argparse
 import numpy as np
 from utils import load, standardize_bbox, color_map, rotation
@@ -13,7 +14,8 @@ def parse_args():
     parser.add_argument('--num', type=int, help='downsample point num', default=np.inf)
     parser.add_argument('--knn', help='using KNN color map', action='store_true')
     parser.add_argument('--center_num', type=int, help='KNN center num', default=24)
-    parser.add_argument('--part', help='perform KNN clustering on the objects and render each segment separately', action='store_true')
+    parser.add_argument('--part', help='perform KNN clustering on the objects and render each segment separately',
+                        action='store_true')
     parser.add_argument('--white', help='render white object', action='store_true')
     parser.add_argument('--RGB', nargs='+', help='render object with specific RGB value', default=[])
     parser.add_argument('--rot', nargs='+', help='rotation angle from x,y,z', default=[])
@@ -46,26 +48,27 @@ def main():
     # load the point cloud
     pcl = load(config.path, config.separator)
 
+    # standardize the point cloud
+    pcl, center, scale = standardize_bbox(config, pcl)
+
+    # rotate the point
+    if len(config.rot) != 0:
+        assert len(config.rot) == 3
+        rot_matrix = rotation(config.rot)
+        pcl[:, :3] = np.matmul(pcl[:, :3], rot_matrix)
+
+    # color the point cloud
+    pcl = color_map(config, pcl)
+
     if config.tool:
         bbox = None if config.bbox == 'none' else np.load(config.bbox)
-        real_time_tool(pcl, config, bbox)
+        real_time_tool(pcl, center, scale, config, bbox)
+    elif config.part:
+        render_part(config, pcl)
+    elif config.render:
+        render(config, pcl)
     else:
-        # standardize the point cloud
-        pcl = standardize_bbox(config, pcl)
-
-        # rotate the point
-        if len(config.rot) != 0:
-            assert len(config.rot) == 3
-            rot_matrix = rotation(config.rot)
-            pcl[:, :3] = np.matmul(pcl[:, :3], rot_matrix)
-
-        # color the point cloud
-        pcl = color_map(config, pcl)
-
-        if config.part:
-            render_part(config, pcl)
-        elif config.render:
-            render(config, pcl)
+        raise 'You must specify the render type.'
 
 
 if __name__ == '__main__':
