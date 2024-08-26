@@ -81,3 +81,23 @@ Many thanks to following codes that help us a lot in building this codebase:
 * [PointFlowRenderer](https://github.com/zekunhao1995/PointFlowRenderer)
 * [Mitsuba2PointCloudRenderer](https://github.com/tolgabirdal/Mitsuba2PointCloudRenderer) 
 * [PointSetGeneration](https://github.com/fanhqme/PointSetGeneration)
+
+
+## Citation
+If you find this project helpful for your research, please consider citing the following BibTeX entry.
+
+```bibtex
+@inproceedings{qi2023recon,
+  title={Contrast with Reconstruct: Contrastive 3D Representation Learning Guided by Generative Pretraining},
+  author={Qi, Zekun and Dong, Runpei and Fan, Guofan and Ge, Zheng and Zhang, Xiangyu and Ma, Kaisheng and Yi, Li},
+  booktitle={International Conference on Machine Learning (ICML) },
+  year={2023}
+}
+@inproceedings{dong2023act,
+  title={Autoencoders as Cross-Modal Teachers: Can Pretrained 2D Image Transformers Help 3D Representation Learning?},
+  author={Runpei Dong and Zekun Qi and Linfeng Zhang and Junbo Zhang and Jianjian Sun and Zheng Ge and Li Yi and Kaisheng Ma},
+  booktitle={The Eleventh International Conference on Learning Representations (ICLR) },
+  year={2023},
+  url={https://openreview.net/forum?id=8Oun8ZUVe8N}
+}
+```
