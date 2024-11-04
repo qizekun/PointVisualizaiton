@@ -1,7 +1,7 @@
 import time
 import argparse
 import numpy as np
-from utils import load, standardize_bbox, color_map, rotation
+from utils import load, standardize_bbox, color_map, rotation, filter_point_cloud, interpolate_point_cloud
 from render import render, render_part
 from simple3d import showpoints as real_time_tool
 
@@ -33,6 +33,8 @@ def parse_args():
     parser.add_argument('--median', help='using median filter', action='store_true')
     parser.add_argument('--bbox', type=str, help='realtime tools bbox visualization', default='none')
     parser.add_argument('--bgr2rgb', help='BGR to RGB', action='store_true')
+    parser.add_argument('--single_view', help='get single view point cloud', action='store_true')
+    parser.add_argument('--upsample', type=int, help='upsample the point cloud', default=1)
 
     args = parser.parse_args()
     return args
@@ -54,11 +56,17 @@ def main():
     # rotate the point
     if len(config.rot) != 0:
         assert len(config.rot) == 3
+        # pcl[:, :3] = np.matmul(pcl[:, :3], [0, 0, -90])
         rot_matrix = rotation(config.rot)
         pcl[:, :3] = np.matmul(pcl[:, :3], rot_matrix)
 
     # color the point cloud
     pcl = color_map(config, pcl)
+
+    if config.single_view:
+        pcl = filter_point_cloud(pcl, 90, fix=True)
+    if config.upsample > 1:
+        pcl = interpolate_point_cloud(pcl, k=config.upsample)
 
     if config.tool:
         bbox = None if config.bbox == 'none' else np.load(config.bbox)

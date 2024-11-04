@@ -4,7 +4,7 @@ from plyfile import PlyData
 from scipy.spatial import distance
 from scipy.ndimage import median_filter, uniform_filter
 from skimage.measure import marching_cubes
-from sklearn.neighbors import NearestNeighbors
+from scipy.spatial import KDTree
 
 
 def load(path, separator=','):
@@ -241,34 +241,28 @@ def rotation(rotation_angle):
     return rot_matrix
 
 
-def interpolate_point_cloud(points, num):
-    N, _ = points.shape
-    k = int(num / N) + 1
+def interpolate_point_cloud(points, k=2):
+    N = points.shape[0]
+    tree = KDTree(points[:, :3])
 
-    nn = NearestNeighbors(n_neighbors=k * k, algorithm='ball_tree').fit(points[:, :3])
-    distances, indices = nn.kneighbors(points[:, :3])
+    dists, indices = tree.query(points[:, :3], k=k)
+    alphas = np.random.rand(N, k - 1, 1)
 
-    interpolated_points = []
-    for i in range(N):
-        neighbors_indices = indices[i, 1:]
-        neighbors = points[neighbors_indices]
-        selected_points = np.random.choice(neighbors.shape[0], k, replace=False)
-        neighbors = neighbors[selected_points]
+    neighbor_points = points[indices[:, 1:], :3]
+    neighbor_attrs = points[indices[:, 1:], 3:]
 
-        interpolated_point = (points[i] + neighbors) / 2.0
-        interpolated_points.append(interpolated_point)
+    original_points = points[:, :3].reshape(N, 1, 3)
+    original_attrs = points[:, 3:].reshape(N, 1, -1)
 
-    interpolated_points = np.concatenate(interpolated_points, axis=0)
-    sampled_points = np.concatenate([points, interpolated_points], axis=0)
-    # sampled_points = fps(sampled_points, num)
-    pt_indices = np.random.choice(sampled_points.shape[0], num, replace=False)
-    np.random.shuffle(pt_indices)
-    sampled_points = sampled_points[pt_indices]
+    new_points = alphas * original_points + (1 - alphas) * neighbor_points
+    new_attrs = alphas * original_attrs + (1 - alphas) * neighbor_attrs
 
-    return sampled_points
+    new_points = np.concatenate([new_points, new_attrs], axis=2).reshape(-1, points.shape[1])
+
+    return np.vstack((points, new_points))
 
 
-def filter_point_cloud(point_cloud, angle_threshold_degrees=90):
+def filter_point_cloud(point_cloud, angle_threshold_degrees=90, fix=False):
     # Extract XYZ coordinates from the point cloud
     xyz = point_cloud[:, :3]
 
@@ -276,16 +270,19 @@ def filter_point_cloud(point_cloud, angle_threshold_degrees=90):
     center = np.mean(xyz, axis=0)
     normalized_xyz = (xyz - center) / np.linalg.norm(xyz - center, axis=1)[:, np.newaxis]
 
-    # Randomly select a point within a sphere of radius sqrt(2)
-    # angles = np.random.uniform(0, np.pi)
-    angles = np.pi / 2
-    x = np.cos(angles)
-    y = - np.sin(angles)
+    # Randomly select a point within a sphere of radius
+    if fix:
+        angles = np.pi / 2
+    else:
+        angles = np.random.uniform(0, np.pi)
+    x = np.sin(angles)
+    y = np.cos(angles)
     random_point = np.array([x, y, 0])
-    # random_point = np.array([0.8, x, y])
 
     # Calculate angles between the random point and all points in the normalized point cloud
-    angles = np.arccos(np.dot(normalized_xyz, random_point.T))
+    dot_product = np.dot(normalized_xyz, random_point.T)
+    clipped_dot_product = np.clip(dot_product, -1.0, 1.0)
+    angles = np.arccos(clipped_dot_product)
 
     # Filter points based on the angle threshold
     filtered_indices = np.where(np.degrees(angles) < angle_threshold_degrees)[0]
@@ -294,7 +291,6 @@ def filter_point_cloud(point_cloud, angle_threshold_degrees=90):
     selected_points = point_cloud[filtered_indices]
 
     return selected_points
-
 
 
 def get_xml(resolution=[1920, 1080], view=[3, 3, 3], radius=0.025, object_type="point"):
