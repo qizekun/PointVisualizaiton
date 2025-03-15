@@ -8,7 +8,7 @@ A point cloud visualization repo
 
 ## Dependencies
 
-python >= 3.7
+python >= 3.8 <= 3.12
 ```bash
 pip install -r requirements.txt
 ```
