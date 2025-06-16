@@ -94,6 +94,34 @@ def showpoints(pts, center, scale, config, bbox=None, waittime=0, showrot=False,
             nrgb = nrgb[:, [2, 1, 0]]
         show.reshape((showsz * showsz, 3))[p[m]] = nrgb[m]
 
+
+        axis_len = 0.15
+        origin_3d = (-center / scale) * (showsz / 1.5)
+        v = axis_len * (showsz / 1.5)  # 轴长度
+
+        axis3d = np.vstack([
+            origin_3d,  # idx 0 : O
+            origin_3d + [v, 0, 0],  # idx 1 : +X
+            origin_3d + [0, v, 0],  # idx 2 : +Y
+            origin_3d + [0, 0, v]  # idx 3 : +Z
+        ])
+        axis2d = axis3d.dot(rotmat)
+        axis2d = (axis2d[:, :2] + [showsz / 2, showsz / 2]).astype(int)
+        row, col = axis2d[:, 0], axis2d[:, 1]  # 行 = 第 0 维，列 = 第 1 维
+
+        O = (col[0], row[0])
+        Xp = (col[1], row[1])
+        Yp = (col[2], row[2])
+        Zp = (col[3], row[3])
+
+        cv2.arrowedLine(show, O, Xp, (0, 0, 255), 2, tipLength=0.08)  # +X 红
+        cv2.arrowedLine(show, O, Yp, (0, 255, 0), 2, tipLength=0.08)  # +Y 绿
+        cv2.arrowedLine(show, O, Zp, (255, 0, 0), 2, tipLength=0.08)  # +Z 蓝
+
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        for p, t, c in [(Xp, 'X', (0, 0, 255)), (Yp, 'Y', (0, 255, 0)), (Zp, 'Z', (255, 0, 0))]:
+            cv2.putText(show, t, (p[0] + 4, p[1] - 4), font, 0.5, c, 1, cv2.LINE_AA)
+
         if bbox is not None:
             interpolated_list = [bbox,
                                  np.linspace(bbox[0], bbox[1], 100),
