@@ -1,4 +1,4 @@
-mitsuba <= 3.4.1
+mitsuba
 argparse
 numpy
 opencv-python
